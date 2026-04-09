@@ -90,11 +90,11 @@ footer{text-align:center;padding:24px 0;font-size:11px;color:#4a6a8a;font-family
     </div>
     <div class="field">
       <label>1er prénom (naissance)</label>
-      <input id="givenname1" placeholder="Jean-Jacques">
+      <input id="givenname1" placeholder="Jean" oninput="autoSplitPrenom()">
     </div>
     <div class="field">
-      <label>2ème prénom (optionnel)</label>
-      <input id="givenname2" placeholder="Pierre">
+      <label>2ème prénom (naissance)</label>
+      <input id="givenname2" placeholder="Jacques">
     </div>
   </div>
   <div class="form-row">
@@ -405,13 +405,29 @@ function switchMode(mode){
   document.getElementById("tab-direct").classList.toggle("active",mode==="direct");
 }
 
+function autoSplitPrenom(){
+  const el=document.getElementById("givenname1");
+  const val=el.value;
+  // Détecte tiret ou espace comme séparateur
+  const sep=val.search(/[- ]/);
+  if(sep>0){
+    const parts=val.split(/[- ]+/).filter(Boolean);
+    if(parts.length>=2){
+      el.value=parts[0];
+      document.getElementById("givenname2").value=parts[1];
+      // Focus sur le champ 2 pour que l'utilisateur voie le résultat
+      document.getElementById("givenname2").focus();
+    }
+  }
+}
+
 function handleGenerate(){
   const s=document.getElementById("surname").value;
   const g1=document.getElementById("givenname1").value;
   const g2=document.getElementById("givenname2").value;
   const d=document.getElementById("birthdate").value;
   const c=document.getElementById("country").value;
-  if(!s||!g1||!d){document.getElementById("u4-result").innerHTML='<div class="error-box">Veuillez remplir au minimum : nom, 1er prénom et date de naissance.</div>';return}
+  if(!s||!g1||!g2||!d){document.getElementById("u4-result").innerHTML='<div class="error-box">Tous les champs sont obligatoires : nom, 1er prénom, 2ème prénom et date de naissance.</div>';return}
   const result=generateU4(s,g1,g2,d,c);
   if(result.error){document.getElementById("u4-result").innerHTML='<div class="error-box">'+result.error+'</div>';return}
   currentU4=result.u4;
