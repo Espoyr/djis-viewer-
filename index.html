@@ -89,8 +89,12 @@ footer{text-align:center;padding:24px 0;font-size:11px;color:#4a6a8a;font-family
       <input id="surname" placeholder="DUPONT">
     </div>
     <div class="field">
-      <label>Prénoms (séparés par espace)</label>
-      <input id="givennames" placeholder="Jean Pierre">
+      <label>1er prénom (naissance)</label>
+      <input id="givenname1" placeholder="Jean-Jacques">
+    </div>
+    <div class="field">
+      <label>2ème prénom (optionnel)</label>
+      <input id="givenname2" placeholder="Pierre">
     </div>
   </div>
   <div class="form-row">
@@ -344,12 +348,21 @@ function transliterate(s){
   return s.normalize("NFD").replace(/[\u0300-\u036f]/g,"").replace(/[^A-Za-z<]/g,"");
 }
 
-function generateU4(surname,givenNames,birthDate,countryCode){
+function generateU4(surname,givenName1,givenName2,birthDate,countryCode){
   const coords=COORDS[countryCode];
   if(!coords)return{error:"Code pays inconnu : "+countryCode};
+  // Translittération et mise en majuscules, séparateurs → <
   let sname=transliterate(surname).toUpperCase().replace(/[^A-Z]+/g,"<");
-  let gname=transliterate(givenNames).toUpperCase().replace(/[^A-Z]+/g,"<");
-  const allNamesStr=sname+"<<"+gname+"<<";
+  let gn1=transliterate(givenName1).toUpperCase().replace(/[^A-Z]+/g,"<");
+  let gn2=givenName2?transliterate(givenName2).toUpperCase().replace(/[^A-Z]+/g,"<"):"";
+  // Construction MRZ : SURNAME<<PRENOM1<PRENOM2<<
+  // Conforme à bl_pgpid_gen_u4 : grep -o "[A-Z]{1,32}<<[A-Z]{1,32}<[A-Z]{0,32}<"
+  let allNamesStr;
+  if(gn2){
+    allNamesStr=sname+"<<"+gn1+"<"+gn2+"<<";
+  }else{
+    allNamesStr=sname+"<<"+gn1+"<<";
+  }
   const match=allNamesStr.match(/[A-Z]{1,32}<<[A-Z]{1,32}<[A-Z]{0,32}</);
   if(!match)return{error:"Nom/prénoms invalides (caractères A-Z uniquement après translittération)"};
   const allnames=match[0];
@@ -394,17 +407,18 @@ function switchMode(mode){
 
 function handleGenerate(){
   const s=document.getElementById("surname").value;
-  const g=document.getElementById("givennames").value;
+  const g1=document.getElementById("givenname1").value;
+  const g2=document.getElementById("givenname2").value;
   const d=document.getElementById("birthdate").value;
   const c=document.getElementById("country").value;
-  if(!s||!g||!d){document.getElementById("u4-result").innerHTML='<div class="error-box">Veuillez remplir tous les champs.</div>';return}
-  const result=generateU4(s,g,d,c);
+  if(!s||!g1||!d){document.getElementById("u4-result").innerHTML='<div class="error-box">Veuillez remplir au minimum : nom, 1er prénom et date de naissance.</div>';return}
+  const result=generateU4(s,g1,g2,d,c);
   if(result.error){document.getElementById("u4-result").innerHTML='<div class="error-box">'+result.error+'</div>';return}
   currentU4=result.u4;
   document.getElementById("direct-u4").value=result.u4;
   document.getElementById("u4-result").innerHTML=
     '<div class="u4-box"><span class="lbl">u4=</span>'+result.u4+
-    '<div class="dim">Hash de : <code>'+result.input+'</code></div></div>';
+    '<div class="dim">Chaîne hachée (MD5→base64url) : <code>'+result.allnames+result.input.slice(result.allnames.length)+'</code></div></div>';
   tryFetch(result.u4);
 }
 
