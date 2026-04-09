@@ -431,15 +431,20 @@ function handleDirectLookup(){
 
 async function tryFetch(u4){
   const p2=u4.substring(0,2),p4=u4.substring(0,4);
-  const url="https://codeberg.org/foopgp/djis/raw/branch/main/by-id/u4/"+p2+"/"+p4+"/"+u4+"/contributions.md";
+  const filePath="by-id/u4/"+p2+"/"+p4+"/"+u4+"/contributions.md";
+  // Utilise l'API Forgejo (CORS activé) au lieu de /raw/ (CORS bloqué)
+  const apiUrl="https://codeberg.org/api/v1/repos/foopgp/djis/contents/"+filePath+"?ref=main";
+  const browseUrl="https://codeberg.org/foopgp/djis/src/branch/main/"+filePath;
   const ds=document.getElementById("data-section");
   const fs=document.getElementById("fetch-status");
   ds.classList.remove("hidden");
-  fs.innerHTML='<div class="info-box">Chargement depuis Codeberg...</div>';
+  fs.innerHTML='<div class="info-box">Chargement depuis Codeberg (API)...</div>';
   try{
-    const resp=await fetch(url);
+    const resp=await fetch(apiUrl);
     if(resp.ok){
-      const text=await resp.text();
+      const json=await resp.json();
+      // L'API Forgejo renvoie le contenu en base64
+      const text=atob(json.content);
       document.getElementById("contrib-text").value=text;
       fs.innerHTML='<div class="ok-box">✓ Données récupérées depuis Codeberg</div>';
       showContribs(parseContributions(text));
@@ -450,9 +455,9 @@ async function tryFetch(u4){
       fs.innerHTML='<div class="warn-box">Erreur serveur ('+resp.status+'). Vous pouvez coller les données manuellement ci-dessous.</div>';
     }
   }catch(e){
-    fs.innerHTML='<div class="warn-box">Impossible de récupérer les données directement (CORS). '+
+    fs.innerHTML='<div class="warn-box">Impossible de récupérer les données directement. '+
       'Copiez le contenu du fichier <code>contributions.md</code> depuis '+
-      '<a href="https://codeberg.org/foopgp/djis/src/branch/main/by-id/u4/'+p2+'/'+p4+'/'+u4+'" target="_blank">le dépôt Codeberg</a> et collez-le ci-dessous.</div>';
+      '<a href="'+browseUrl+'" target="_blank">le dépôt Codeberg</a> et collez-le ci-dessous.</div>';
   }
 }
 
